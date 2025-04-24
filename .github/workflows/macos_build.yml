@@ -26,7 +26,7 @@ jobs:
 
       - name: Build the app with PyInstaller
         run: |
-          pyinstaller --onefile --windowed --icon=icon.icns main.py
+          pyinstaller --onefile --windowed  main.py
 
       - name: Upload macOS app as artifact
         uses: actions/upload-artifact@v4
