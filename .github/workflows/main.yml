@@ -3,7 +3,7 @@ name: macOS Build
 on:
   push:
     branches:
-      - main  # This will trigger the build on every push to the main branch
+      - main  # This will trigger the build on every push to the main branc
 
 jobs:
   build:
