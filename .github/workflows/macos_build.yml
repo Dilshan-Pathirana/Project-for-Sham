@@ -3,7 +3,9 @@ name: macOS Build
 on:
   push:
     branches:
-      - main # This will trigger the build on every push to the main branch
+      - main
+  workflow_dispatch:  # <-- This allows you to manually run the workflow
+
 
 jobs:
   build:
