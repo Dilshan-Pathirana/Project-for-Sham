@@ -30,7 +30,8 @@ jobs:
           pyinstaller --onefile --windowed --icon=icon.icns main.py  # Build the app using PyInstaller
 
       - name: Upload macOS app as artifact
-        uses: actions/upload-artifact@v2 # Uploads the output .app as an artifact
+        uses: actions/upload-artifact@v3
         with:
-          name: macos-app
-          path: dist/ # This is the directory where PyInstaller outputs the .app file
+            name: macos-app
+            path: dist/
+ # This is the directory where PyInstaller outputs the .app file
