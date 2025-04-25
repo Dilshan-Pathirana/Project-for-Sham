@@ -1,133 +1,80 @@
 import os
 import shutil
+import tkinter as tk
+from tkinter import filedialog, messagebox, scrolledtext
 import pyperclip
-import threading
-import logging
-from pathlib import Path
-from tkinter import Tk, Label, Text, Button, filedialog, END, messagebox, Scrollbar
-import tkinter.ttk as ttk
 
+def get_clipboard_text():
+    return pyperclip.paste()
 
-# Configure logging
-logging.basicConfig(filename="file_copy.log", level=logging.DEBUG, format='%(asctime)s - %(message)s')
+def browse_source_folder():
+    folder = filedialog.askdirectory(title="Select Source Folder")
+    if folder:
+        source_var.set(folder)
 
+def browse_destination_folder():
+    folder = filedialog.askdirectory(title="Select Destination Folder")
+    if folder:
+        destination_var.set(folder)
 
-class CR2FilterApp:
-    def __init__(self, root):
-        self.root = root
-        root.title("CR2 Image Filter & Copier")
-        root.geometry("700x600")
+def start_filtering():
+    source = source_var.get()
+    dest = destination_var.get()
+    filenames_text = text_input.get("1.0", tk.END).strip()
 
-        # --- UI Elements ---
-        Label(root, text="Paste Filenames (with or without extension):", font=("Segoe UI", 11)).pack(pady=(10, 0))
+    if not source or not dest or not filenames_text:
+        messagebox.showerror("Missing Information", "Please fill in all fields.")
+        return
 
-        self.text_area = Text(root, height=10, font=("Segoe UI", 10))
-        self.text_area.pack(fill="x", padx=20, pady=(0, 10))
+    filenames = {f.strip() for f in filenames_text.splitlines() if f.strip()}
+    found = 0
+    copied = 0
 
-        Button(root, text="📋 Paste from Clipboard", command=self.paste_clipboard).pack(pady=5)
-        Button(root, text="📂 Select Source Folder", command=self.select_source).pack(pady=5)
-        Button(root, text="📁 Select Destination Folder", command=self.select_dest).pack(pady=5)
-        Button(root, text="🚀 Copy Matching .cr2 Files", command=self.copy_files).pack(pady=10)
+    try:
+        for file in os.listdir(source):
+            file_path = os.path.join(source, file)
+            name = os.path.splitext(file)[0]
+            if file.endswith('.cr2') and (file in filenames or name in filenames):
+                shutil.copy(file_path, dest)
+                copied += 1
+        messagebox.showinfo("Success", f"{copied} image(s) copied successfully.")
+    except Exception as e:
+        messagebox.showerror("Error", f"An error occurred:\n{e}")
 
-        Label(root, text="Log:", font=("Segoe UI", 11)).pack()
-        self.log_area = Text(root, height=10, font=("Consolas", 9))
-        self.log_area.pack(fill="both", expand=True, padx=20, pady=(0, 10))
+# GUI Setup
+root = tk.Tk()
+root.title("PUPA v1.0 by Dilshan")
+root.geometry("600x500")
+root.resizable(False, False)
 
-        # Progress bar
-        self.progress = ttk.Progressbar(root, orient="horizontal", length=300, mode="indeterminate")
-        self.progress.pack(pady=10)
+# Fonts and Colors
+FONT = ("Segoe UI", 10)
 
-        # State
-        self.source_folder = None
-        self.dest_folder = None
+# Source folder
+tk.Label(root, text="Source Folder:", font=FONT).pack(pady=(10, 0))
+source_frame = tk.Frame(root)
+source_frame.pack(padx=10, fill="x")
+source_var = tk.StringVar()
+tk.Entry(source_frame, textvariable=source_var, font=FONT).pack(side="left", fill="x", expand=True)
+tk.Button(source_frame, text="Browse", command=browse_source_folder).pack(side="right", padx=5)
 
-    def paste_clipboard(self):
-        try:
-            clipboard_text = pyperclip.paste()
-            if not clipboard_text.strip():
-                messagebox.showwarning("Clipboard Empty", "Clipboard is empty. Please copy filenames.")
-                return
-            self.text_area.delete("1.0", END)
-            self.text_area.insert("1.0", clipboard_text)
-            logging.info("Pasted clipboard content.")
-        except Exception as e:
-            messagebox.showerror("Clipboard Error", f"Failed to access clipboard.\n{e}")
+# Destination folder
+tk.Label(root, text="Destination Folder:", font=FONT).pack(pady=(10, 0))
+dest_frame = tk.Frame(root)
+dest_frame.pack(padx=10, fill="x")
+destination_var = tk.StringVar()
+tk.Entry(dest_frame, textvariable=destination_var, font=FONT).pack(side="left", fill="x", expand=True)
+tk.Button(dest_frame, text="Browse", command=browse_destination_folder).pack(side="right", padx=5)
 
-    def select_source(self):
-        folder = filedialog.askdirectory(title="Select Source Folder")
-        if folder:
-            self.source_folder = Path(folder)
-            logging.info(f"Source folder selected: {self.source_folder}")
-            self.log(f"Source folder selected: {self.source_folder}")
+# Clipboard area
+tk.Label(root, text="Paste Filenames (from clipboard):", font=FONT).pack(pady=(10, 0))
+text_input = scrolledtext.ScrolledText(root, height=10, font=FONT)
+text_input.pack(padx=10, pady=5, fill="both", expand=True)
 
-    def select_dest(self):
-        folder = filedialog.askdirectory(title="Select Destination Folder")
-        if folder:
-            self.dest_folder = Path(folder)
-            logging.info(f"Destination folder selected: {self.dest_folder}")
-            self.log(f"Destination folder selected: {self.dest_folder}")
+# Paste from clipboard button
+tk.Button(root, text="Paste from Clipboard", command=lambda: text_input.insert(tk.END, get_clipboard_text())).pack(pady=5)
 
-    def copy_files(self):
-        if not self.source_folder or not self.dest_folder:
-            messagebox.showwarning("Missing Folders", "Please select both source and destination folders.")
-            return
+# Start button
+tk.Button(root, text="Copy Matching Images", command=start_filtering, height=2, bg="#2e8b57", fg="white", font=("Segoe UI", 11, "bold")).pack(pady=10)
 
-        filenames = [line.strip() for line in self.text_area.get("1.0", END).splitlines() if line.strip()]
-        if not filenames:
-            messagebox.showwarning("No Filenames", "No filenames provided in the clipboard.")
-            return
-
-        # Start the progress bar
-        self.progress.start()
-
-        # Start the copying process in a separate thread
-        threading.Thread(target=self.copy_files_thread, args=(filenames,)).start()
-
-    def copy_files_thread(self, filenames):
-        source_files = set(file.name.lower() for file in self.source_folder.glob("*.cr2"))
-        copied = 0
-        not_found = []
-
-        for name in filenames:
-            # If the file has the .cr2 extension, strip it
-            if not name.lower().endswith(".cr2"):
-                name = f"{name}.cr2"
-
-            file_path = self.source_folder / name.lower()  # Ensure case-insensitivity
-            if file_path.name.lower() in source_files:
-                try:
-                    shutil.copy2(file_path, self.dest_folder)
-                    self.log(f"✅ Copied: {file_path.name}")
-                    logging.info(f"Copied: {file_path.name}")
-                    copied += 1
-                except Exception as e:
-                    self.log(f"❌ Error copying {file_path.name}: {e}")
-                    logging.error(f"Error copying {file_path.name}: {e}")
-            else:
-                not_found.append(name)
-
-        # Stop the progress bar and show message
-        self.progress.stop()
-        self.show_results(copied, not_found)
-
-    def show_results(self, copied, not_found):
-        if copied:
-            messagebox.showinfo("Done", f"{copied} file(s) copied successfully.")
-        if not_found:
-            messagebox.showwarning("Files Not Found", f"Could not find the following files:\n" + "\n".join(not_found))
-        
-        # Log results
-        logging.info(f"Total files copied: {copied}")
-        if not_found:
-            logging.warning(f"Files not found: {', '.join(not_found)}")
-
-    def log(self, message):
-        self.log_area.insert(END, message + "\n")
-        self.log_area.see(END)
-
-
-# Run the GUI app
-if __name__ == "__main__":
-    root = Tk()
-    app = CR2FilterApp(root)
-    root.mainloop()
+root.mainloop()
