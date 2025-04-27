@@ -34,7 +34,7 @@ def start_filtering():
         for file in os.listdir(source):
             file_path = os.path.join(source, file)
             name = os.path.splitext(file)[0]
-            if file.endswith('.cr2') and (file in filenames or name in filenames):
+            if (file in filenames or name in filenames):
                 shutil.copy(file_path, dest)
                 copied += 1
         messagebox.showinfo("Success", f"{copied} image(s) copied successfully.")
